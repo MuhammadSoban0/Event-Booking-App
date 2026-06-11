@@ -162,38 +162,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Good Afternoon',
-                    style: GoogleFonts.lexend(
-                      fontSize: 16,
-                      color: AppTheme.textSecondaryColor,
-                    ),
-                  ),
                   const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Text(
-                        'Muhammad Soban',
-                        style: GoogleFonts.lexend(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.textPrimaryColor,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.eco,
-                          color: Colors.white,
-                          size: 16,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    'Discover Events',
+                    style: GoogleFonts.lexend(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimaryColor,
+                    ),
                   ),
                 ],
               ),
@@ -214,35 +190,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           
           const SizedBox(height: 20),
-          
-          // Search Bar
-          TextField(
-            controller: _searchController,
-            onChanged: (value) {
-              ref.read(searchQueryProvider.notifier).state = value;
-            },
-            decoration: InputDecoration(
-              hintText: 'Search events...',
-              hintStyle: GoogleFonts.lexend(color: AppTheme.textSecondaryColor),
-              prefixIcon: Icon(Icons.search, color: AppTheme.textSecondaryColor),
-              filled: true,
-              fillColor: Colors.grey[50],
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Colors.grey[200]!),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Colors.grey[200]!),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: AppTheme.primaryColor),
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            ),
-            style: GoogleFonts.lexend(color: AppTheme.textPrimaryColor),
-          ),
         ],
       ),
     );
@@ -499,19 +446,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Fresh Events',
+                'Explore Events',
                 style: GoogleFonts.lexend(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.textPrimaryColor,
-                ),
-              ),
-              Text(
-                'See All',
-                style: GoogleFonts.lexend(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.green,
                 ),
               ),
             ],
@@ -946,7 +885,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     ElevatedButton(
                       onPressed: () {
-                        // Handle event booking
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => EventDetailsScreen(event: event),
+                          ),
+                        );
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryColor,
