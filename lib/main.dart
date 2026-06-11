@@ -6,6 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'firebase_options.dart';
 import 'core/app_theme.dart';
 import 'services/stripe_service.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,6 +19,9 @@ void main() async {
   
   // Initialize Stripe
   await StripeService.init();
+  
+  // Initialize Local Notifications
+  await NotificationService.init();
 
   runApp(
     const ProviderScope(

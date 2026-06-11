@@ -9,6 +9,7 @@ import '../../core/app_theme.dart';
 import '../../model/evnt_model.dart';
 import '../../services/stripe_service.dart';
 import '../../services/booking_service.dart';
+import '../../services/notification_service.dart';
 import '../payment/payment_confirmation_screen.dart';
 
 class EventDetailsScreen extends StatefulWidget {
@@ -248,6 +249,14 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
+      // 🔔 Send booking confirmation notification
+      await NotificationService.showBookingConfirmationNotification(
+        eventTitle: widget.event.title,
+        eventDate: widget.event.date,
+        ticketQuantity: _ticketQuantity,
+        bookingId: bookingRef.id,
+      );
+
       // Navigate to confirmation screen
       if (mounted) {
         Navigator.of(context).pushReplacement(
@@ -262,6 +271,11 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         );
       }
     } catch (e) {
+      // 🔔 Send payment failed notification
+      await NotificationService.showPaymentFailedNotification(
+        eventTitle: widget.event.title,
+      );
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
