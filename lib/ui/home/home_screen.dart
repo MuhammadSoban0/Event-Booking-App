@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/app_theme.dart';
 import '../../model/evnt_model.dart';
 import '../../providers/event_provider.dart';
@@ -38,6 +39,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _loadInitialEvents() async {
+    setState(() {
+      _allEvents = []; // Clear events to show shimmer
+    });
+    
     try {
       final querySnapshot = await FirebaseFirestore.instance
           .collection('Events')
@@ -57,6 +62,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     } catch (e) {
       print('Error loading initial events: $e');
+      if (mounted) {
+        setState(() {
+          _allEvents = []; // Keep empty to show error state
+        });
+      }
     }
   }
 
@@ -128,13 +138,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               
               // Loading indicator for pagination
               if (_isLoadingMore)
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      color: AppTheme.primaryColor,
-                    ),
-                  ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  child: _buildEventShimmerCard(),
                 ),
             ],
           ),
@@ -250,7 +256,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       children: [
         const SizedBox(height: 20),
         SizedBox(
-          height: 200,
+          height: 160, // Reduced from 200 to 160
           child: featuredEventsAsync.when(
             data: (events) {
               if (events.isEmpty) {
@@ -262,7 +268,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   return _buildFeaturedEventCard(events[index]);
                 },
                 options: CarouselOptions(
-                  height: 200,
+                  height: 160, // Reduced from 200 to 160
                   autoPlay: true,
                   autoPlayInterval: const Duration(seconds: 4),
                   autoPlayAnimationDuration: const Duration(milliseconds: 800),
@@ -274,7 +280,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => _buildCarouselShimmer(),
             error: (error, stack) => Center(
               child: Text(
                 'Error loading featured events',
@@ -286,6 +292,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ],
     );
   }
+
+  Widget _buildCarouselShimmer() {
+    return CarouselSlider.builder(
+      itemCount: 3, // Show 3 shimmer cards
+      itemBuilder: (context, index, realIndex) {
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ).animate(onPlay: (controller) => controller.repeat())
+            .shimmer(duration: 1500.ms, color: Colors.white.withValues(alpha: 0.8))
+            .then(delay: 400.ms)
+            .shimmer(duration: 1500.ms, color: Colors.white.withValues(alpha: 0.6)),
+        );
+      },
+      options: CarouselOptions(
+        height: 160, // Updated to match new carousel height
+        enlargeCenterPage: true,
+        enlargeFactor: 0.2,
+        viewportFraction: 0.85,
+        scrollDirection: Axis.horizontal,
+      ),
+    );
+  }
   Widget _buildEmptyFeaturedEvents() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -295,8 +338,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppTheme.primaryColor.withOpacity(0.1),
-            AppTheme.primaryColor.withOpacity(0.05),
+            AppTheme.primaryColor.withValues(alpha: 0.1),
+            AppTheme.primaryColor.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
@@ -337,7 +380,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -353,13 +396,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 imageUrl: event.imageUrl,
                 fit: BoxFit.cover,
                 placeholder: (context, url) => Container(
-                  color: Colors.grey[300],
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      color: AppTheme.primaryColor,
-                      strokeWidth: 2,
-                    ),
-                  ),
+                  color: Colors.grey[200],
+                  child: Container()
+                    .animate(onPlay: (controller) => controller.repeat())
+                    .shimmer(duration: 1500.ms, color: Colors.white.withValues(alpha: 0.8))
+                    .then(delay: 400.ms)
+                    .shimmer(duration: 1500.ms, color: Colors.white.withValues(alpha: 0.6)),
                 ),
                 errorWidget: (context, url, error) => Container(
                   color: Colors.grey[300],
@@ -382,8 +424,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.black.withOpacity(0.3),
-                      Colors.black.withOpacity(0.7),
+                      Colors.black.withValues(alpha: 0.3),
+                      Colors.black.withValues(alpha: 0.7),
                     ],
                   ),
                 ),
@@ -395,26 +437,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  // Discount Badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.orange,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '30% OFF',
-                      style: GoogleFonts.lexend(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  // Event Title
+                  // Event Title Only
                   Text(
                     event.title,
                     style: GoogleFonts.lexend(
@@ -425,54 +450,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 8),
-                  // Event Description
-                  Text(
-                    event.description,
-                    style: GoogleFonts.lexend(
-                      fontSize: 14,
-                      color: Colors.white.withOpacity(0.9),
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 16),
-                  // Date and Venue
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.calendar_today,
-                        size: 16,
-                        color: Colors.white.withOpacity(0.9),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        event.date,
-                        style: GoogleFonts.lexend(
-                          fontSize: 12,
-                          color: Colors.white.withOpacity(0.9),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Icon(
-                        Icons.location_on,
-                        size: 16,
-                        color: Colors.white.withOpacity(0.9),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          event.venueName,
-                          style: GoogleFonts.lexend(
-                            fontSize: 12,
-                            color: Colors.white.withOpacity(0.9),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
+              ),
+            ),
+            
+            // Discount Banner - Top Right Corner
+            Positioned(
+              top: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: const BorderRadius.only(
+                    topRight: Radius.circular(20),
+                    bottomLeft: Radius.circular(20),
+                  ),
+                ),
+                child: Text(
+                  '30% OFF',
+                  style: GoogleFonts.lexend(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ),
           ],
@@ -512,7 +514,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SizedBox(height: 20),
           
           // Events List (Full-Width Cards) - Using local state
-          if (_allEvents.isEmpty)
+          if (_allEvents.isEmpty && !_isLoadingMore)
+            _buildEventsShimmer() // Show shimmer for initial load
+          else if (_allEvents.isEmpty)
             _buildEmptyEventsState()
           else
             ListView.builder(
@@ -530,6 +534,200 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  Widget _buildEventsShimmer() {
+    return Column(
+      children: List.generate(3, (index) => _buildEventShimmerCard()),
+    );
+  }
+
+  Widget _buildEventShimmerCard() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Shimmer Image
+          Container(
+            height: 200,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+          ),
+          
+          // Shimmer Content
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Category badges shimmer
+                Row(
+                  children: [
+                    Container(
+                      height: 24,
+                      width: 80,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      height: 24,
+                      width: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 12),
+                
+                // Title shimmer
+                Container(
+                  height: 20,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                
+                const SizedBox(height: 8),
+                
+                Container(
+                  height: 20,
+                  width: MediaQuery.of(context).size.width * 0.6,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                
+                const SizedBox(height: 8),
+                
+                // Description shimmer
+                Container(
+                  height: 16,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                
+                const SizedBox(height: 4),
+                
+                Container(
+                  height: 16,
+                  width: MediaQuery.of(context).size.width * 0.8,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Info row shimmer
+                Row(
+                  children: [
+                    Container(
+                      height: 16,
+                      width: 80,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(width: 32),
+                    Container(
+                      height: 16,
+                      width: 120,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Price and button row shimmer
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          height: 12,
+                          width: 60,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          height: 20,
+                          width: 80,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      height: 40,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 8),
+                
+                // Seats shimmer
+                Container(
+                  height: 12,
+                  width: 100,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ).animate(onPlay: (controller) => controller.repeat())
+      .shimmer(duration: 1500.ms, color: Colors.white.withValues(alpha: 0.8))
+      .then(delay: 400.ms)
+      .shimmer(duration: 1500.ms, color: Colors.white.withValues(alpha: 0.6));
+  }
+
   Widget _buildFullWidthEventCard(Event event) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -538,7 +736,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -557,13 +755,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               fit: BoxFit.cover,
               placeholder: (context, url) => Container(
                 height: 200,
-                color: Colors.grey[100],
-                child: Center(
-                  child: CircularProgressIndicator(
-                    color: AppTheme.primaryColor,
-                    strokeWidth: 2,
-                  ),
-                ),
+                color: Colors.grey[200],
+                child: Container()
+                  .animate(onPlay: (controller) => controller.repeat())
+                  .shimmer(duration: 1500.ms, color: Colors.white.withValues(alpha: 0.8))
+                  .then(delay: 400.ms)
+                  .shimmer(duration: 1500.ms, color: Colors.white.withValues(alpha: 0.6)),
               ),
               errorWidget: (context, url, error) => Container(
                 height: 200,
@@ -591,7 +788,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.1),
+                        color: AppTheme.primaryColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -608,7 +805,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
+                          color: Colors.orange.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Row(
@@ -794,53 +991,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               style: GoogleFonts.lexend(
                 fontSize: 14,
                 color: AppTheme.textSecondaryColor,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorState(String error) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Something went wrong',
-              style: GoogleFonts.lexend(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimaryColor,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              error,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.lexend(
-                fontSize: 14,
-                color: AppTheme.textSecondaryColor,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                _loadInitialEvents();
-              },
-              child: Text(
-                'Retry',
-                style: GoogleFonts.lexend(
-                  fontWeight: FontWeight.w600,
-                ),
               ),
             ),
           ],
