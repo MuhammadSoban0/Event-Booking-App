@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -29,9 +28,9 @@ class _CustomNavigationScreenState extends State<CustomNavigationScreen> {
   final Color secondaryColor = Colors.black.withOpacity(0.34); // Black with 34% opacity for unselected
 
   final List<Map<String, dynamic>> _tabs = [
-    {'key': 'navHome', 'icon': 'assets/images/home1.svg', 'activeIcon': 'assets/images/home.svg'},
-    {'key': 'navExplore', 'icon': 'assets/images/map.svg', 'activeIcon': 'assets/images/map2.svg'},
-    {'key': 'navSettings', 'icon': 'assets/images/settings.svg', 'activeIcon': 'assets/images/settings2.svg'},
+    {'key': 'navHome', 'icon': Icons.home_outlined, 'activeIcon': Icons.home},
+    {'key': 'navBooking', 'icon': Icons.event_note_outlined, 'activeIcon': Icons.event_note},
+    {'key': 'navSettings', 'icon': Icons.settings_outlined, 'activeIcon': Icons.settings},
   ];
 
   final List<Widget> _pages = [
@@ -63,7 +62,7 @@ class _CustomNavigationScreenState extends State<CustomNavigationScreen> {
       case 0:
         return 'Home';
       case 1:
-        return 'Booking';
+        return 'Bookings';
       case 2:
         return 'Settings';
       default:
@@ -150,10 +149,10 @@ class _CustomNavigationScreenState extends State<CustomNavigationScreen> {
                               mainAxisSize: MainAxisSize.min,
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                SvgPicture.asset(
+                                Icon(
                                   isActive ? tab['activeIcon'] : tab['icon'],
                                   color: isActive ? Colors.white : secondaryColor, // White for active, black 34% for inactive
-                                  height: 20,
+                                  size: 20,
                                 ),
                                 if (isActive) ...[
                                   const SizedBox(width: 6),
