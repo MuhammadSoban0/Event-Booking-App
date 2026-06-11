@@ -1,10 +1,15 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/app_theme.dart';
 import '../../model/evnt_model.dart';
+import '../../services/stripe_service.dart';
+import '../../services/booking_service.dart';
+import '../payment/payment_confirmation_screen.dart';
 
 class EventDetailsScreen extends StatefulWidget {
   final Event event;
@@ -17,6 +22,8 @@ class EventDetailsScreen extends StatefulWidget {
 class _EventDetailsScreenState extends State<EventDetailsScreen> {
   int _currentImageIndex = 0;
   bool _isBookmarked = false;
+  bool _isProcessingPayment = false;
+  int _ticketQuantity = 1;
   late final PageController _pageController;
 
   @override
@@ -29,6 +36,432 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  // Handle ticket booking with Stripe payment
+  // Future<void> _handleTicketBooking() async {
+  //   if (_isProcessingPayment || widget.event.availableSeats <= 0) return;
+  //
+  //   setState(() {
+  //     _isProcessingPayment = true;
+  //   });
+  //
+  //   try {
+  //     print('=== BOOKING DEBUG START ===');
+  //     print('Event ID: ${widget.event.eventId}');
+  //     print('Event Title: ${widget.event.title}');
+  //     print('Ticket Quantity: $_ticketQuantity');
+  //     print('User authenticated: ${FirebaseAuth.instance.currentUser != null}');
+  //     print('User ID: ${FirebaseAuth.instance.currentUser?.uid}');
+  //
+  //     // Calculate total amount
+  //     final totalAmount = widget.event.totalExpence * _ticketQuantity;
+  //     print('Total Amount: $totalAmount ${widget.event.currency}');
+  //
+  //     // Create booking first
+  //     print('Creating booking...');
+  //     final bookingId = await BookingService.createBooking(
+  //       event: widget.event,
+  //       paymentIntentId: '', // Will be updated after payment
+  //       ticketQuantity: _ticketQuantity,
+  //       paymentMetadata: {
+  //         'event_title': widget.event.title,
+  //         'ticket_quantity': _ticketQuantity,
+  //         'event_date': widget.event.date,
+  //       },
+  //     );
+  //
+  //     if (bookingId == null) {
+  //       throw Exception('Failed to create booking - please check your login status');
+  //     }
+  //     print('Booking created with ID: $bookingId');
+  //
+  //     // Process Stripe payment
+  //     print('Processing Stripe payment...');
+  //     final paymentSuccess = await StripeService.processPayment(
+  //       context: context,
+  //       amount: totalAmount,
+  //       currency: widget.event.currency.toLowerCase(),
+  //       description: 'Ticket for ${widget.event.title} - ${widget.event.date}',
+  //       metadata: {
+  //         'booking_id': bookingId,
+  //         'event_id': widget.event.eventId,
+  //         'ticket_quantity': _ticketQuantity,
+  //       },
+  //     );
+  //
+  //     print('Payment success: $paymentSuccess');
+  //
+  //     if (paymentSuccess) {
+  //       print('Completing booking...');
+  //       // Complete the booking process
+  //       final bookingCompleted = await BookingService.completeBooking(
+  //         bookingId: bookingId,
+  //         eventId: widget.event.id ?? widget.event.eventId,
+  //         ticketQuantity: _ticketQuantity,
+  //       );
+  //
+  //       print('Booking completed: $bookingCompleted');
+  //
+  //       if (paymentSuccess) {
+  //         await BookingService.updateBookingPaymentStatus(
+  //           bookingId: bookingId,
+  //           paymentStatus: 'completed',
+  //         );
+  //
+  //         if (mounted) {
+  //           Navigator.of(context).pushReplacement(
+  //             MaterialPageRoute(
+  //               builder: (context) => PaymentConfirmationScreen(
+  //                 event: widget.event,
+  //                 ticketQuantity: _ticketQuantity,
+  //                 totalAmount: totalAmount,
+  //                 bookingId: bookingId,
+  //               ),
+  //             ),
+  //           );
+  //         }
+  //       }else {
+  //         throw Exception('Failed to complete booking - seat update failed');
+  //       }
+  //     } else {
+  //       // Payment failed, update booking status
+  //       print('Payment failed, updating booking status...');
+  //       await BookingService.updateBookingPaymentStatus(
+  //         bookingId: bookingId,
+  //         paymentStatus: 'failed',
+  //       );
+  //
+  //       if (mounted) {
+  //         ScaffoldMessenger.of(context).showSnackBar(
+  //           const SnackBar(
+  //             content: Text('Payment failed or was canceled. Please try again.'),
+  //             backgroundColor: Colors.orange,
+  //             duration: Duration(seconds: 3),
+  //           ),
+  //         );
+  //       }
+  //     }
+  //   } catch (e, stackTrace) {
+  //     print('=== BOOKING ERROR ===');
+  //     print('Error: $e');
+  //     print('Stack trace: $stackTrace');
+  //
+  //     if (mounted) {
+  //       String errorMessage = 'Booking failed';
+  //
+  //       // Provide specific error messages
+  //       if (e.toString().contains('not authenticated')) {
+  //         errorMessage = 'Please log in to book tickets';
+  //       } else if (e.toString().contains('Stripe')) {
+  //         errorMessage = 'Payment system error. Please try again.';
+  //       } else if (e.toString().contains('seat')) {
+  //         errorMessage = 'Not enough seats available';
+  //       } else {
+  //         errorMessage = 'Booking failed: ${e.toString()}';
+  //       }
+  //
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(
+  //           content: Text(errorMessage),
+  //           backgroundColor: Colors.red,
+  //           duration: const Duration(seconds: 5),
+  //           action: SnackBarAction(
+  //             label: 'Retry',
+  //             textColor: Colors.white,
+  //             onPressed: () => _handleTicketBooking(),
+  //           ),
+  //         ),
+  //       );
+  //     }
+  //   } finally {
+  //     print('=== BOOKING DEBUG END ===');
+  //     if (mounted) {
+  //       setState(() {
+  //         _isProcessingPayment = false;
+  //       });
+  //     }
+  //   }
+  // }
+  Future<void> _handleTicketBooking() async {
+    if (_isProcessingPayment) return;
+
+    setState(() {
+      _isProcessingPayment = true;
+    });
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final totalAmount = widget.event.totalExpence * _ticketQuantity;
+
+      // Process payment first
+      final paymentSuccess = await StripeService.processPayment(
+        context: context,
+        amount: totalAmount,
+        currency: widget.event.currency.toLowerCase(),
+        description:
+        'Ticket for ${widget.event.title} - ${widget.event.date}',
+        metadata: {
+          'event_id': widget.event.eventId,
+          'ticket_quantity': _ticketQuantity,
+        },
+      );
+
+      if (!paymentSuccess) {
+        throw Exception('Payment failed');
+      }
+
+      // Create booking after successful payment
+      final bookingRef =
+      FirebaseFirestore.instance.collection('Bookings').doc();
+
+      await bookingRef.set({
+        'bookingId': bookingRef.id,
+        'uid': user.uid,
+        'userEmail': user.email,
+
+        // Event Information
+        'eventId': widget.event.eventId,
+        'eventTitle': widget.event.title,
+        'eventDescription': widget.event.description,
+        'eventDate': widget.event.date,
+        'eventImage': widget.event.imageUrl,
+
+        // Ticket Information
+        'ticketQuantity': _ticketQuantity,
+        'ticketPrice': widget.event.totalExpence,
+        'totalAmount': totalAmount,
+        'currency': widget.event.currency,
+
+        // Payment Information
+        'paymentStatus': 'completed',
+
+        // Booking Status
+        'bookingStatus': 'confirmed',
+
+        // Timestamps
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // Navigate to confirmation screen
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => PaymentConfirmationScreen(
+              event: widget.event,
+              ticketQuantity: _ticketQuantity,
+              totalAmount: totalAmount,
+              bookingId: bookingRef.id,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Booking failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessingPayment = false;
+        });
+      }
+    }
+  }
+  // Show quantity selector dialog
+  void _showQuantitySelector() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Handle bar
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  Text(
+                    'Select Tickets',
+                    style: GoogleFonts.lexend(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimaryColor,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Ticket quantity selector
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'General Admission',
+                              style: GoogleFonts.lexend(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textPrimaryColor,
+                              ),
+                            ),
+                            Text(
+                              '${widget.event.currency} ${widget.event.totalExpence.toStringAsFixed(0)} per ticket',
+                              style: GoogleFonts.lexend(
+                                fontSize: 14,
+                                color: AppTheme.textSecondaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            IconButton(
+                              onPressed: _ticketQuantity > 1
+                                  ? () {
+                                      setModalState(() {
+                                        _ticketQuantity--;
+                                      });
+                                      setState(() {});
+                                    }
+                                  : null,
+                              icon: const Icon(Icons.remove_circle_outline),
+                              color: AppTheme.primaryColor,
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFE5E7EB)),
+                              ),
+                              child: Text(
+                                '$_ticketQuantity',
+                                style: GoogleFonts.lexend(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.textPrimaryColor,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: _ticketQuantity < widget.event.availableSeats
+                                  ? () {
+                                      setModalState(() {
+                                        _ticketQuantity++;
+                                      });
+                                      setState(() {});
+                                    }
+                                  : null,
+                              icon: const Icon(Icons.add_circle_outline),
+                              color: AppTheme.primaryColor,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Total and continue button
+                  Row(
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Total',
+                            style: GoogleFonts.lexend(
+                              fontSize: 12,
+                              color: AppTheme.textSecondaryColor,
+                            ),
+                          ),
+                          Text(
+                            '${widget.event.currency} ${(widget.event.totalExpence * _ticketQuantity).toStringAsFixed(0)}',
+                            style: GoogleFonts.lexend(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 24),
+                      Expanded(
+                        child: SizedBox(
+                          height: 48,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              _handleTicketBooking();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              'Continue to Payment',
+                              style: GoogleFonts.lexend(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: MediaQuery.of(context).padding.bottom),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -539,7 +972,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${event.currency} ${event.totalExpence.toStringAsFixed(0)}',
+                        '${widget.event.currency} ${(widget.event.totalExpence * _ticketQuantity).toStringAsFixed(0)}',
                         style: GoogleFonts.lexend(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -553,14 +986,8 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                     child: SizedBox(
                       height: 56,
                       child: ElevatedButton(
-                        onPressed: event.availableSeats > 0
-                            ? () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Processing Ticket Booking...'),
-                                  ),
-                                );
-                              }
+                        onPressed: (widget.event.availableSeats > 0 && !_isProcessingPayment)
+                            ? _showQuantitySelector
                             : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primaryColor,
@@ -572,13 +999,22 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           ),
                           elevation: 0,
                         ),
-                        child: Text(
-                          event.availableSeats > 0 ? 'Book Ticket' : 'Sold Out',
-                          style: GoogleFonts.lexend(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        child: _isProcessingPayment
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                widget.event.availableSeats > 0 ? 'Book Ticket' : 'Sold Out',
+                                style: GoogleFonts.lexend(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       ),
                     ),
                   ),
