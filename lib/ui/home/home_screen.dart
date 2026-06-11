@@ -8,6 +8,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/app_theme.dart';
 import '../../model/evnt_model.dart';
 import '../../providers/event_provider.dart';
+import '../event_details/event_details_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -369,19 +370,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
   Widget _buildFeaturedEventCard(Event event) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => EventDetailsScreen(event: event),
           ),
-        ],
-      ),
-      child: ClipRRect(
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: Stack(
           children: [
@@ -475,8 +485,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
   Widget _buildAllEventsSection() {
     return Padding(
       padding: const EdgeInsets.all(20.0),
@@ -727,8 +738,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildFullWidthEventCard(Event event) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => EventDetailsScreen(event: event),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
       decoration: ShapeDecoration(
         color: Colors.white,
         shape: RoundedRectangleBorder(
@@ -964,8 +984,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
   Widget _buildEmptyEventsState() {
     return Center(
       child: Padding(
