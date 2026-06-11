@@ -1,16 +1,917 @@
 import 'package:flutter/material.dart';
-class HomeScreen extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:carousel_slider/carousel_slider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/app_theme.dart';
+import '../../model/evnt_model.dart';
+import '../../providers/event_provider.dart';
+
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  bool _isLoadingMore = false;
+  List<Event> _allEvents = [];
+  bool _hasMoreEvents = true;
+  DocumentSnapshot? _lastDocument;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+    _loadInitialEvents();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadInitialEvents() async {
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('Events')
+          .where('status', isEqualTo: 'active')
+          .orderBy('createdAt', descending: true)
+          .limit(5)
+          .get();
+
+      if (mounted) {
+        setState(() {
+          _allEvents = querySnapshot.docs
+              .map((doc) => Event.fromFirestore(doc))
+              .toList();
+          _lastDocument = querySnapshot.docs.isNotEmpty ? querySnapshot.docs.last : null;
+          _hasMoreEvents = querySnapshot.docs.length == 5;
+        });
+      }
+    } catch (e) {
+      print('Error loading initial events: $e');
+    }
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= 
+        _scrollController.position.maxScrollExtent - 100) {
+      _loadMoreEvents();
+    }
+  }
+
+  Future<void> _loadMoreEvents() async {
+    if (_isLoadingMore || !_hasMoreEvents || _lastDocument == null) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('Events')
+          .where('status', isEqualTo: 'active')
+          .orderBy('createdAt', descending: true)
+          .startAfterDocument(_lastDocument!) // Start after last loaded document
+          .limit(5)
+          .get();
+
+      if (mounted) {
+        final newEvents = querySnapshot.docs
+            .map((doc) => Event.fromFirestore(doc))
+            .toList();
+
+        setState(() {
+          _allEvents.addAll(newEvents); // Add to existing list, don't replace
+          _lastDocument = querySnapshot.docs.isNotEmpty ? querySnapshot.docs.last : _lastDocument;
+          _hasMoreEvents = newEvents.length == 5;
+          _isLoadingMore = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading more events: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Colors.red,
+    final featuredEventsAsync = ref.watch(featuredEventsProvider);
+
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          controller: _scrollController,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header and Search Section
+              _buildHeaderSection(),
+              
+              // Featured Events Carousel Slider (Limited to 3)
+              _buildFeaturedEventsCarousel(featuredEventsAsync),
+              
+              // All Events Section (Local State Management)
+              _buildAllEventsSection(),
+              
+              // Loading indicator for pagination
+              if (_isLoadingMore)
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: AppTheme.primaryColor,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _addSampleEvent,
+        backgroundColor: AppTheme.primaryColor,
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
     );
+  }
+  Widget _buildHeaderSection() {
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Greeting and Profile
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Good Afternoon',
+                    style: GoogleFonts.lexend(
+                      fontSize: 16,
+                      color: AppTheme.textSecondaryColor,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(
+                        'Muhammad Soban',
+                        style: GoogleFonts.lexend(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimaryColor,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.eco,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              // Notification Icon
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.notifications_outlined,
+                  color: AppTheme.textPrimaryColor,
+                  size: 24,
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Search Bar
+          TextField(
+            controller: _searchController,
+            onChanged: (value) {
+              ref.read(searchQueryProvider.notifier).state = value;
+            },
+            decoration: InputDecoration(
+              hintText: 'Search events...',
+              hintStyle: GoogleFonts.lexend(color: AppTheme.textSecondaryColor),
+              prefixIcon: Icon(Icons.search, color: AppTheme.textSecondaryColor),
+              filled: true,
+              fillColor: Colors.grey[50],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: Colors.grey[200]!),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: Colors.grey[200]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: AppTheme.primaryColor),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            ),
+            style: GoogleFonts.lexend(color: AppTheme.textPrimaryColor),
+          ),
+        ],
+      ),
+    );
+  }
+  Widget _buildFeaturedEventsCarousel(AsyncValue<List<Event>> featuredEventsAsync) {
+    return Column(
+      children: [
+        const SizedBox(height: 20),
+        SizedBox(
+          height: 200,
+          child: featuredEventsAsync.when(
+            data: (events) {
+              if (events.isEmpty) {
+                return _buildEmptyFeaturedEvents();
+              }
+              return CarouselSlider.builder(
+                itemCount: events.length,
+                itemBuilder: (context, index, realIndex) {
+                  return _buildFeaturedEventCard(events[index]);
+                },
+                options: CarouselOptions(
+                  height: 200,
+                  autoPlay: true,
+                  autoPlayInterval: const Duration(seconds: 4),
+                  autoPlayAnimationDuration: const Duration(milliseconds: 800),
+                  autoPlayCurve: Curves.fastOutSlowIn,
+                  enlargeCenterPage: true,
+                  enlargeFactor: 0.2,
+                  viewportFraction: 0.85,
+                  scrollDirection: Axis.horizontal,
+                ),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stack) => Center(
+              child: Text(
+                'Error loading featured events',
+                style: GoogleFonts.lexend(color: Colors.red),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  Widget _buildEmptyFeaturedEvents() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.primaryColor.withOpacity(0.1),
+            AppTheme.primaryColor.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.event_note,
+            size: 48,
+            color: AppTheme.primaryColor,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'No Featured Events Yet',
+            style: GoogleFonts.lexend(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimaryColor,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Check back later for exciting events',
+            style: GoogleFonts.lexend(
+              fontSize: 14,
+              color: AppTheme.textSecondaryColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  Widget _buildFeaturedEventCard(Event event) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Stack(
+          children: [
+            // Background Image
+            Positioned.fill(
+              child: CachedNetworkImage(
+                imageUrl: event.imageUrl,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
+                  color: Colors.grey[300],
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: AppTheme.primaryColor,
+                      strokeWidth: 2,
+                    ),
+                  ),
+                ),
+                errorWidget: (context, url, error) => Container(
+                  color: Colors.grey[300],
+                  child: Center(
+                    child: Icon(
+                      Icons.error_outline,
+                      color: Colors.grey[600],
+                      size: 48,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            
+            // Dark Overlay for text readability
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.3),
+                      Colors.black.withOpacity(0.7),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            
+            // Content
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Discount Badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.orange,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '30% OFF',
+                      style: GoogleFonts.lexend(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Event Title
+                  Text(
+                    event.title,
+                    style: GoogleFonts.lexend(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  // Event Description
+                  Text(
+                    event.description,
+                    style: GoogleFonts.lexend(
+                      fontSize: 14,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 16),
+                  // Date and Venue
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today,
+                        size: 16,
+                        color: Colors.white.withOpacity(0.9),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        event.date,
+                        style: GoogleFonts.lexend(
+                          fontSize: 12,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Icon(
+                        Icons.location_on,
+                        size: 16,
+                        color: Colors.white.withOpacity(0.9),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          event.venueName,
+                          style: GoogleFonts.lexend(
+                            fontSize: 12,
+                            color: Colors.white.withOpacity(0.9),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  Widget _buildAllEventsSection() {
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Fresh Events',
+                style: GoogleFonts.lexend(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textPrimaryColor,
+                ),
+              ),
+              Text(
+                'See All',
+                style: GoogleFonts.lexend(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.green,
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Events List (Full-Width Cards) - Using local state
+          if (_allEvents.isEmpty)
+            _buildEmptyEventsState()
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _allEvents.length,
+              itemBuilder: (context, index) {
+                return _buildFullWidthEventCard(_allEvents[index]);
+              },
+            ),
+          
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFullWidthEventCard(Event event) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Event Image
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            child: CachedNetworkImage(
+              imageUrl: event.imageUrl,
+              height: 200,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(
+                height: 200,
+                color: Colors.grey[100],
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: AppTheme.primaryColor,
+                    strokeWidth: 2,
+                  ),
+                ),
+              ),
+              errorWidget: (context, url, error) => Container(
+                height: 200,
+                color: Colors.grey[100],
+                child: Center(
+                  child: Icon(
+                    Icons.event,
+                    size: 48,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          
+          // Event Details
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Category and Featured Badge Row
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        event.category,
+                        style: GoogleFonts.lexend(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.primaryColor,
+                        ),
+                      ),
+                    ),
+                    if (event.featured) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.star,
+                              size: 12,
+                              color: Colors.orange,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Featured',
+                              style: GoogleFonts.lexend(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.orange,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                
+                const SizedBox(height: 12),
+                
+                // Event Title
+                Text(
+                  event.title,
+                  style: GoogleFonts.lexend(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimaryColor,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                
+                const SizedBox(height: 8),
+                
+                // Event Description
+                Text(
+                  event.description,
+                  style: GoogleFonts.lexend(
+                    fontSize: 14,
+                    color: AppTheme.textSecondaryColor,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Event Info Row
+                Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today,
+                      size: 16,
+                      color: AppTheme.textSecondaryColor,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      event.date,
+                      style: GoogleFonts.lexend(
+                        fontSize: 13,
+                        color: AppTheme.textSecondaryColor,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Icon(
+                      Icons.location_on,
+                      size: 16,
+                      color: AppTheme.textSecondaryColor,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        '${event.venueName}, ${event.city}',
+                        style: GoogleFonts.lexend(
+                          fontSize: 13,
+                          color: AppTheme.textSecondaryColor,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Price and Action Row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Starting from',
+                          style: GoogleFonts.lexend(
+                            fontSize: 12,
+                            color: AppTheme.textSecondaryColor,
+                          ),
+                        ),
+                        Text(
+                          '${event.currency} ${event.totalExpence.toStringAsFixed(0)}',
+                          style: GoogleFonts.lexend(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
+                        ),
+                      ],
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Handle event booking
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                      ),
+                      child: Text(
+                        'Book Now',
+                        style: GoogleFonts.lexend(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 8),
+                
+                // Seats Available
+                Text(
+                  '${event.availableSeats} seats available',
+                  style: GoogleFonts.lexend(
+                    fontSize: 12,
+                    color: event.availableSeats > 0 
+                        ? Colors.green 
+                        : Colors.red,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  Widget _buildEmptyEventsState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          children: [
+            Icon(
+              Icons.event_busy,
+              size: 64,
+              color: AppTheme.textSecondaryColor,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No events found',
+              style: GoogleFonts.lexend(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textPrimaryColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Check back later for new events',
+              style: GoogleFonts.lexend(
+                fontSize: 14,
+                color: AppTheme.textSecondaryColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.red,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Something went wrong',
+              style: GoogleFonts.lexend(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textPrimaryColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.lexend(
+                fontSize: 14,
+                color: AppTheme.textSecondaryColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                _loadInitialEvents();
+              },
+              child: Text(
+                'Retry',
+                style: GoogleFonts.lexend(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addSampleEvent() async {
+    try {
+      final eventData = {
+        "eventId": "EVT${DateTime.now().millisecondsSinceEpoch}",
+        "title": "Flutter Workshop 2026",
+        "description": "Learn Flutter development from basics to advanced concepts. Build amazing mobile apps!",
+        "category": "Technology",
+        "imageUrl": "https://example.com/flutter-workshop.jpg",
+        "images": [
+          "https://example.com/image1.jpg",
+          "https://example.com/image2.jpg",
+          "https://example.com/image3.jpg"
+        ],
+        "venueName": "Tech Hub Islamabad",
+        "address": "F-7 Markaz, Islamabad",
+        "city": "Islamabad",
+        "country": "Pakistan",
+        "date": "15/07/2026",
+        "startTime": "09:00 AM",
+        "endTime": "06:00 PM",
+        "totalExpence": 2500.0,
+        "currency": "PKR",
+        "totalSeats": 150,
+        "availableSeats": 147,
+        "organizerId": "org_${DateTime.now().millisecondsSinceEpoch}",
+        "organizerName": "Flutter Pakistan",
+        "contactEmail": "info@flutterpakistan.com",
+        "contactPhone": "+923001234567",
+        "status": "active",
+        "featured": true,
+        "createdAt": FieldValue.serverTimestamp(),
+      };
+      await FirebaseFirestore.instance.collection('Events').add(eventData);
+      
+      // Refresh the local events list
+      await _loadInitialEvents();
+      ref.invalidate(featuredEventsProvider);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Sample event added successfully!',
+              style: GoogleFonts.lexend(color: Colors.white),
+            ),
+            backgroundColor: AppTheme.primaryColor,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Error adding event: $e',
+              style: GoogleFonts.lexend(color: Colors.white),
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 }

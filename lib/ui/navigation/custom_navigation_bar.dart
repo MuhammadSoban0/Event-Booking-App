@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../core/app_theme.dart';
 import '../../setting/setting_screen.dart';
@@ -17,8 +18,7 @@ class CustomNavigationScreen extends StatefulWidget {
   State<CustomNavigationScreen> createState() => _CustomNavigationScreenState();
 }
 
-class _CustomNavigationScreenState extends State<CustomNavigationScreen> with TickerProviderStateMixin {
-  late TabController _tabController;
+class _CustomNavigationScreenState extends State<CustomNavigationScreen> {
   ValueNotifier<int> currentIndex = ValueNotifier(0);
   ValueNotifier<Color> sliderColor = ValueNotifier<Color>(Colors.black); // Black for selected slider
 
@@ -43,29 +43,144 @@ class _CustomNavigationScreenState extends State<CustomNavigationScreen> with Ti
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this, initialIndex: widget.initialIndex);
     currentIndex.value = widget.initialIndex;
-
-    _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
-        setState(() {
-          currentIndex.value = _tabController.index;
-        });
-      }
-    });
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
     currentIndex.dispose();
     sliderColor.dispose();
     super.dispose();
   }
+
   void _handleTabTap(int index) {
-    _tabController.animateTo(index, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     sliderColor.value = Colors.black; // Black slider for selected tab
     currentIndex.value = index;
+  }
+
+  String _getTabLabel(int index) {
+    switch (index) {
+      case 0:
+        return 'Home';
+      case 1:
+        return 'Booking';
+      case 2:
+        return 'Settings';
+      default:
+        return 'Tab';
+    }
+  }
+
+  Widget _buildCustomBottomNavBar() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    return Container(
+      margin: EdgeInsets.only(
+        left: screenWidth * 0.03,
+        right: screenWidth * 0.03,
+        bottom: 20,
+      ),
+      height: screenHeight * 0.07,
+      constraints: const BoxConstraints(minHeight: 54, maxHeight: 70),
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.02, vertical: 6),
+      decoration: ShapeDecoration(
+        color: AppTheme.backgroundColor, // White background from theme
+        shape: RoundedRectangleBorder(
+          side: BorderSide(
+            width: 1,
+            color: const Color(0xFFE5E5E5), // Light gray border
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        shadows: [
+          BoxShadow(
+            color: Color(0x1A000000), // Subtle black shadow
+            blurRadius: 8.90,
+            offset: Offset(0, 2),
+            spreadRadius: 0,
+          )
+        ],
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final tabWidth = constraints.maxWidth / _tabs.length;
+
+          return ValueListenableBuilder<int>(
+            valueListenable: currentIndex,
+            builder: (context, activeIndex, child) {
+              return Stack(
+                children: [
+                  // Slider background
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    left: tabWidth * activeIndex,
+                    top: 0,
+                    bottom: 0,
+                    child: ValueListenableBuilder<Color>(
+                      valueListenable: sliderColor,
+                      builder: (context, color, _) {
+                        return Container(
+                          width: tabWidth,
+                          decoration: BoxDecoration(
+                            color: color,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  // Row of tabs
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: List.generate(_tabs.length, (index) {
+                      final isActive = currentIndex.value == index;
+                      final tab = _tabs[index];
+
+                      return Expanded(
+                        child: GestureDetector(
+                          onTap: () => _handleTabTap(index),
+                          behavior: HitTestBehavior.opaque,
+                          child: Container(
+                            height: constraints.maxHeight,
+                            alignment: Alignment.center,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SvgPicture.asset(
+                                  isActive ? tab['activeIcon'] : tab['icon'],
+                                  color: isActive ? Colors.white : secondaryColor, // White for active, black 34% for inactive
+                                  height: 20,
+                                ),
+                                if (isActive) ...[
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _getTabLabel(index),
+                                    style: GoogleFonts.lexend(
+                                      color: Colors.white, // White text for selected tab
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                ]
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -87,115 +202,16 @@ class _CustomNavigationScreenState extends State<CustomNavigationScreen> with Ti
       },
       child: Scaffold(
         extendBody: true,
-        body: TabBarView(
-          controller: _tabController,
-          physics: const NeverScrollableScrollPhysics(),
-          children: _pages,
+        body: ValueListenableBuilder<int>(
+          valueListenable: currentIndex,
+          builder: (context, index, child) {
+            return IndexedStack(
+              index: index,
+              children: _pages,
+            );
+          },
         ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-        floatingActionButton: showNav ? Container(
-          margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
-          width: double.infinity,
-          height: screenHeight * 0.07,
-          constraints: const BoxConstraints(minHeight: 54, maxHeight: 70),
-          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.02, vertical: 6),
-          decoration: ShapeDecoration(
-            color: AppTheme.backgroundColor, // White background from theme
-            shape: RoundedRectangleBorder(
-              side: BorderSide(
-                width: 1,
-                color: const Color(0xFFE5E5E5), // Light gray border
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            shadows: [
-              BoxShadow(
-                color: Color(0x1A000000), // Subtle black shadow
-                blurRadius: 8.90,
-                offset: Offset(0, 2),
-                spreadRadius: 0,
-              )
-            ],
-          ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final tabWidth = constraints.maxWidth / _tabs.length;
-
-              return ValueListenableBuilder<int>(
-                valueListenable: currentIndex,
-                builder: (context, activeIndex, child) {
-                  return Stack(
-                    children: [
-                      // Slider background
-                      AnimatedPositioned(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                        left: tabWidth * activeIndex,
-                        top: 0,
-                        bottom: 0,
-                        child: ValueListenableBuilder<Color>(
-                          valueListenable: sliderColor,
-                          builder: (context, color, _) {
-                            return Container(
-                              width: tabWidth,
-                              decoration: BoxDecoration(
-                                color: color,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-
-                      // Row of tabs
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: List.generate(_tabs.length, (index) {
-                          final isActive = currentIndex.value == index;
-                          final tab = _tabs[index];
-
-                          return Expanded(
-                            child: GestureDetector(
-                              onTap: () => _handleTabTap(index),
-                              behavior: HitTestBehavior.opaque,
-                              child: Container(
-                                height: constraints.maxHeight,
-                                alignment: Alignment.center,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    SvgPicture.asset(
-                                      isActive ? tab['activeIcon'] : tab['icon'],
-                                      color: isActive ? Colors.white : secondaryColor, // White for active, black 34% for inactive
-                                      height: 20,
-                                    ),
-                                    if (isActive) ...[
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'navHome',
-                                        style: GoogleFonts.lexend(
-                                          color: Colors.white, // White text for selected tab
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          height: 1.3,
-                                        ),
-                                      ),
-                                    ]
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        }),
-                      ),
-                    ],
-                  );
-                },
-              );
-            },
-          ),
-        ) : null,
+        bottomNavigationBar: showNav ? _buildCustomBottomNavBar() : null,
       ),
     );
   }
