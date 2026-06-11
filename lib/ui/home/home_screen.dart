@@ -146,11 +146,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addSampleEvent,
-        backgroundColor: AppTheme.primaryColor,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
     );
   }
   Widget _buildHeaderSection() {
@@ -997,71 +992,5 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       ),
     );
-  }
-
-  Future<void> _addSampleEvent() async {
-    try {
-      final eventData = {
-        "eventId": "EVT${DateTime.now().millisecondsSinceEpoch}",
-        "title": "Flutter Workshop 2026",
-        "description": "Learn Flutter development from basics to advanced concepts. Build amazing mobile apps!",
-        "category": "Technology",
-        "imageUrl": "https://example.com/flutter-workshop.jpg",
-        "images": [
-          "https://example.com/image1.jpg",
-          "https://example.com/image2.jpg",
-          "https://example.com/image3.jpg"
-        ],
-        "venueName": "Tech Hub Islamabad",
-        "address": "F-7 Markaz, Islamabad",
-        "city": "Islamabad",
-        "country": "Pakistan",
-        "date": "15/07/2026",
-        "startTime": "09:00 AM",
-        "endTime": "06:00 PM",
-        "totalExpence": 2500.0,
-        "currency": "PKR",
-        "totalSeats": 150,
-        "availableSeats": 147,
-        "organizerId": "org_${DateTime.now().millisecondsSinceEpoch}",
-        "organizerName": "Flutter Pakistan",
-        "contactEmail": "info@flutterpakistan.com",
-        "contactPhone": "+923001234567",
-        "status": "active",
-        "featured": true,
-        "createdAt": FieldValue.serverTimestamp(),
-      };
-      await FirebaseFirestore.instance.collection('Events').add(eventData);
-      
-      // Refresh the local events list
-      await _loadInitialEvents();
-      ref.invalidate(featuredEventsProvider);
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Sample event added successfully!',
-              style: GoogleFonts.lexend(color: Colors.white),
-            ),
-            backgroundColor: AppTheme.primaryColor,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Error adding event: $e',
-              style: GoogleFonts.lexend(color: Colors.white),
-            ),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
   }
 }
