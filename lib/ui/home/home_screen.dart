@@ -538,15 +538,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildEventShimmerCard() {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
+      decoration: ShapeDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        shadows: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
+            color: Color(0x21000000),
+            blurRadius: 17,
+            offset: Offset(0, 6),
+            spreadRadius: 0,
+          )
         ],
       ),
       child: Column(
@@ -558,7 +561,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             width: double.infinity,
             decoration: BoxDecoration(
               color: Colors.grey[200],
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             ),
           ),
           
@@ -726,15 +729,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildFullWidthEventCard(Event event) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
+      decoration: ShapeDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        shadows: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
+            color: Color(0x21000000),
+            blurRadius: 17,
+            offset: Offset(0, 6),
+            spreadRadius: 0,
+          )
         ],
       ),
       child: Column(
@@ -742,7 +748,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         children: [
           // Event Image
           ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             child: CachedNetworkImage(
               imageUrl: event.imageUrl,
               height: 200,
