@@ -162,7 +162,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 4),
                   Text(
                     'Discover Events',
                     style: GoogleFonts.lexend(
@@ -175,8 +174,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ],
           ),
-          
-          const SizedBox(height: 20),
         ],
       ),
     );
@@ -203,9 +200,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   autoPlayInterval: const Duration(seconds: 4),
                   autoPlayAnimationDuration: const Duration(milliseconds: 800),
                   autoPlayCurve: Curves.fastOutSlowIn,
-                  enlargeCenterPage: true,
-                  enlargeFactor: 0.2,
-                  viewportFraction: 0.85,
+                  enlargeCenterPage: false, // Disable enlarging to make all cards same size
+                  viewportFraction: 1.0, // Full width cards
                   scrollDirection: Axis.horizontal,
                 ),
               );
@@ -228,7 +224,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       itemCount: 3, // Show 3 shimmer cards
       itemBuilder: (context, index, realIndex) {
         return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 8),
+          margin: const EdgeInsets.symmetric(horizontal: 4), // Reduced margin to match main carousel
           decoration: BoxDecoration(
             color: Colors.grey[200],
             borderRadius: BorderRadius.circular(20),
@@ -252,9 +248,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       },
       options: CarouselOptions(
         height: 160, // Updated to match new carousel height
-        enlargeCenterPage: true,
-        enlargeFactor: 0.2,
-        viewportFraction: 0.85,
+        enlargeCenterPage: false, // Disable enlarging to match main carousel
+        viewportFraction: 1.0, // Full width to match main carousel
         scrollDirection: Axis.horizontal,
       ),
     );
@@ -313,8 +308,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         );
       },
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8),
+      child: Container(width: double.infinity,
+        margin: const EdgeInsets.symmetric(horizontal:20), // Reduced margin for wider cards
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           boxShadow: [

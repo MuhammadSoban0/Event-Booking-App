@@ -76,7 +76,7 @@ class BookingScreen extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20.0),
             itemCount: bookings.length,
             itemBuilder: (context, index) {
-              return _buildSimpleBookingCard(bookings[index]);
+              return _buildSimpleBookingCard(bookings[index], index);
             },
           ),
         );
@@ -86,7 +86,7 @@ class BookingScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSimpleBookingCard(Booking booking) {
+  Widget _buildSimpleBookingCard(Booking booking, int index) {
     Color statusColor = _getStatusColor(booking.bookingStatus);
     Color paymentStatusColor = _getPaymentStatusColor(booking.paymentStatus);
 
@@ -232,7 +232,10 @@ class BookingScreen extends ConsumerWidget {
           ),
         ],
       ),
-    );
+    ).animate(delay: Duration(milliseconds: index * 100))
+      .fadeIn(duration: 800.ms, curve: Curves.easeOut)
+      .slideY(begin: 0.5, end: 0, curve: Curves.easeOutBack)
+      .scale(begin: Offset(0.9, 0.9), end: Offset(1.0, 1.0), curve: Curves.easeOut);
   }
 
   Widget _buildStatusBadge(String status, Color color) {
