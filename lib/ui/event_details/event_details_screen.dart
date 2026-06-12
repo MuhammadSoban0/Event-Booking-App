@@ -516,56 +516,6 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           // Divider
                           const Divider(height: 32, color: Color(0xFFF3F4F6)),
 
-                          // Available Seats / Progress Section
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Tickets Available',
-                                    style: GoogleFonts.lexend(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppTheme.textPrimaryColor,
-                                    ),
-                                  ),
-                                  Text(
-                                    '${event.availableSeats} / ${event.totalSeats} seats left',
-                                    style: GoogleFonts.lexend(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: event.availableSeats > 0 ? Colors.green : Colors.red,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: LinearProgressIndicator(
-                                  value: occupancyProgress,
-                                  minHeight: 10,
-                                  backgroundColor: const Color(0xFFE5E7EB),
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    event.availableSeats > 0 ? Colors.green : Colors.red,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '${(occupancyProgress * 100).toStringAsFixed(0)}% tickets booked',
-                                style: GoogleFonts.lexend(
-                                  fontSize: 12,
-                                  color: AppTheme.textSecondaryColor,
-                                ),
-                              ),
-                            ],
-                          ).animate().fadeIn(delay: 300.ms, duration: 400.ms),
-
-                          const Divider(height: 32, color: Color(0xFFF3F4F6)),
-
                           // About Event Section
                           Text(
                             'About this Event',

@@ -90,6 +90,7 @@ class StripeService {
         barrierDismissible: false,
         builder: (context) => const Center(
           child: Card(
+            color: Colors.white,
             child: Padding(
               padding: EdgeInsets.all(20),
               child: Column(
