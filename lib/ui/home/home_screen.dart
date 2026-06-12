@@ -224,7 +224,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       itemCount: 3, // Show 3 shimmer cards
       itemBuilder: (context, index, realIndex) {
         return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4), // Reduced margin to match main carousel
+          margin: const EdgeInsets.symmetric(horizontal: 20), // Reduced margin to match main carousel
           decoration: BoxDecoration(
             color: Colors.grey[200],
             borderRadius: BorderRadius.circular(20),
