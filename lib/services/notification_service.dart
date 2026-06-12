@@ -13,9 +13,9 @@ class NotificationService {
     tz.initializeTimeZones();
 
     // const AndroidInitializationSettings androidSettings =
-    // AndroidInitializationSettings('ic_notification');
+    // AndroidInitializationSettings('@mipmap/ic_launcher');
     const androidSettings =
-    AndroidInitializationSettings('@mipmap/ic_notification');
+    AndroidInitializationSettings('@mipmap/ic_launcher');
 
     const DarwinInitializationSettings iosSettings =
     DarwinInitializationSettings(
@@ -77,8 +77,8 @@ class NotificationService {
         playSound: true,
         enableVibration: true,
         ticker: 'Booking Confirmed',
-        // icon: 'ic_notification',
-        icon: '@mipmap/ic_notification',
+        // icon: '@mipmap/ic_launcher',
+        icon: '@mipmap/ic_launcher',
         // largeIcon: DrawableResourceAndroidBitmap('app_logo'),
         color: Color(0xFF000000),
       ),
@@ -115,8 +115,8 @@ class NotificationService {
         priority: Priority.high,
         playSound: true,
         enableVibration: true,
-        // icon: 'ic_notification',
-        icon: '@mipmap/ic_notification',
+        // icon: '@mipmap/ic_launcher',
+        icon: '@mipmap/ic_launcher',
         // largeIcon: DrawableResourceAndroidBitmap('app_logo'),
       ),
       iOS: DarwinNotificationDetails(
@@ -144,8 +144,8 @@ class NotificationService {
         'payment_notifications',
         'Payment Notifications',
         channelDescription: 'Notifications for payment status',
-        // icon: 'ic_notification',
-        icon: '@mipmap/ic_notification',
+        // icon: '@mipmap/ic_launcher',
+        icon: '@mipmap/ic_launcher',
         // largeIcon: DrawableResourceAndroidBitmap('app_logo'),
         importance: Importance.high,
         priority: Priority.high,

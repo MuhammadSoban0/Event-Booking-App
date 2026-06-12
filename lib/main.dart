@@ -2,6 +2,7 @@ import 'package:event_booking_app/ui/auth/auth_screen.dart';
 import 'package:event_booking_app/ui/splash/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'firebase_options.dart';
@@ -22,6 +23,10 @@ void main() async {
   await StripeService.init();
   
   // Initialize Local Notifications
+  const initializationSettings = InitializationSettings(
+    android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+    iOS: DarwinInitializationSettings(),
+  );
   await NotificationService.init();
 
   runApp(
