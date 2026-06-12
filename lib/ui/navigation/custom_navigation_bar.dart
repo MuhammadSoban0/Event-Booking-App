@@ -4,9 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../core/app_theme.dart';
-import '../../setting/setting_screen.dart';
 import '../booking/booking_screen.dart';
 import '../home/home_screen.dart';
+import '../setting/setting_screen.dart';
 
 
 class CustomNavigationScreen extends StatefulWidget {
