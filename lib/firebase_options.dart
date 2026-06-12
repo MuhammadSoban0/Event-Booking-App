@@ -3,6 +3,7 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
 ///
@@ -52,11 +53,11 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBRqu8oTasViSHUGkUJF0JOWCMJb1uvoNc',
-    appId: '1:134380975447:android:b2f282c785573d222afa12',
-    messagingSenderId: '134380975447',
-    projectId: 'event-booking-app-91659',
-    storageBucket: 'event-booking-app-91659.firebasestorage.app',
+  static FirebaseOptions get android => FirebaseOptions(
+    apiKey: dotenv.env['FIREBASE_API_KEY'] ?? 'AIzaSyBRqu8oTasViSHUGkUJF0JOWCMJb1uvoNc',
+    appId: dotenv.env['FIREBASE_APP_ID'] ?? '1:134380975447:android:b2f282c785573d222afa12',
+    messagingSenderId: dotenv.env['FIREBASE_MESSAGING_SENDER_ID'] ?? '134380975447',
+    projectId: dotenv.env['FIREBASE_PROJECT_ID'] ?? 'event-booking-app-91659',
+    storageBucket: dotenv.env['FIREBASE_STORAGE_BUCKET'] ?? 'event-booking-app-91659.firebasestorage.app',
   );
 }
