@@ -12,7 +12,9 @@ class NotificationService {
   static Future<void> init() async {
     tz.initializeTimeZones();
 
-    const AndroidInitializationSettings androidSettings =
+    // const AndroidInitializationSettings androidSettings =
+    // AndroidInitializationSettings('ic_notification');
+    const androidSettings =
     AndroidInitializationSettings('@mipmap/ic_launcher');
 
     const DarwinInitializationSettings iosSettings =
@@ -75,12 +77,17 @@ class NotificationService {
         playSound: true,
         enableVibration: true,
         ticker: 'Booking Confirmed',
+        // icon: 'ic_notification',
+        icon: '@mipmap/ic_launcher',
+        // largeIcon: DrawableResourceAndroidBitmap('app_logo'),
+        color: Color(0xFF1976D2), // Primary blue color
       ),
       iOS: DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
         sound: 'default',
+        attachments: [],
       ),
     );
 
@@ -108,6 +115,9 @@ class NotificationService {
         priority: Priority.high,
         playSound: true,
         enableVibration: true,
+        // icon: 'ic_notification',
+        icon: '@mipmap/ic_launcher',
+        // largeIcon: DrawableResourceAndroidBitmap('app_logo'),
       ),
       iOS: DarwinNotificationDetails(
         presentAlert: true,
@@ -134,6 +144,9 @@ class NotificationService {
         'payment_notifications',
         'Payment Notifications',
         channelDescription: 'Notifications for payment status',
+        // icon: 'ic_notification',
+        icon: '@mipmap/ic_launcher',
+        // largeIcon: DrawableResourceAndroidBitmap('app_logo'),
         importance: Importance.high,
         priority: Priority.high,
         color: Color(0xFFFF0000),

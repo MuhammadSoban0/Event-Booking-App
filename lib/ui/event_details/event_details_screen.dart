@@ -24,7 +24,6 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   int _currentImageIndex = 0;
   bool _isBookmarked = false;
   bool _isProcessingPayment = false;
-  int _ticketQuantity = 1;
   late final PageController _pageController;
 
   @override
@@ -184,7 +183,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   //     }
   //   }
   // }
-  Future<void> _handleTicketBooking() async {
+  Future<void> _handleEventBooking() async {
     if (_isProcessingPayment) return;
 
     setState(() {
@@ -198,18 +197,17 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         throw Exception('User not authenticated');
       }
 
-      final totalAmount = widget.event.totalExpence * _ticketQuantity;
+      final totalAmount = widget.event.totalExpence;
 
-      // Process payment first
+      // Process payment first - directly show Stripe payment sheet
       final paymentSuccess = await StripeService.processPayment(
         context: context,
         amount: totalAmount,
         currency: widget.event.currency.toLowerCase(),
-        description:
-        'Ticket for ${widget.event.title} - ${widget.event.date}',
+        description: 'Booking for ${widget.event.title} - ${widget.event.date}',
         metadata: {
           'event_id': widget.event.eventId,
-          'ticket_quantity': _ticketQuantity,
+          'ticket_quantity': 1,
         },
       );
 
@@ -218,8 +216,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
       }
 
       // Create booking after successful payment
-      final bookingRef =
-      FirebaseFirestore.instance.collection('Bookings').doc();
+      final bookingRef = FirebaseFirestore.instance.collection('Bookings').doc();
 
       await bookingRef.set({
         'bookingId': bookingRef.id,
@@ -234,7 +231,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         'eventImage': widget.event.imageUrl,
 
         // Ticket Information
-        'ticketQuantity': _ticketQuantity,
+        'ticketQuantity': 1,
         'ticketPrice': widget.event.totalExpence,
         'totalAmount': totalAmount,
         'currency': widget.event.currency,
@@ -253,7 +250,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
       await NotificationService.showBookingConfirmationNotification(
         eventTitle: widget.event.title,
         eventDate: widget.event.date,
-        ticketQuantity: _ticketQuantity,
+        ticketQuantity: 1,
         bookingId: bookingRef.id,
       );
 
@@ -263,7 +260,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
           MaterialPageRoute(
             builder: (context) => PaymentConfirmationScreen(
               event: widget.event,
-              ticketQuantity: _ticketQuantity,
+              ticketQuantity: 1,
               totalAmount: totalAmount,
               bookingId: bookingRef.id,
             ),
@@ -279,6 +276,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            behavior: SnackBarBehavior.floating,
             content: Text('Booking failed: $e'),
             backgroundColor: Colors.red,
           ),
@@ -291,191 +289,6 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         });
       }
     }
-  }
-  // Show quantity selector dialog
-  void _showQuantitySelector() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Container(
-              padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
-                ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Handle bar
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  Text(
-                    'Select Tickets',
-                    style: GoogleFonts.lexend(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimaryColor,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Ticket quantity selector
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF9FAFB),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE5E7EB)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'General Admission',
-                              style: GoogleFonts.lexend(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.textPrimaryColor,
-                              ),
-                            ),
-                            Text(
-                              '${widget.event.currency} ${widget.event.totalExpence.toStringAsFixed(0)} per ticket',
-                              style: GoogleFonts.lexend(
-                                fontSize: 14,
-                                color: AppTheme.textSecondaryColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            IconButton(
-                              onPressed: _ticketQuantity > 1
-                                  ? () {
-                                      setModalState(() {
-                                        _ticketQuantity--;
-                                      });
-                                      setState(() {});
-                                    }
-                                  : null,
-                              icon: const Icon(Icons.remove_circle_outline),
-                              color: AppTheme.primaryColor,
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: const Color(0xFFE5E7EB)),
-                              ),
-                              child: Text(
-                                '$_ticketQuantity',
-                                style: GoogleFonts.lexend(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.textPrimaryColor,
-                                ),
-                              ),
-                            ),
-                            IconButton(
-                              onPressed: _ticketQuantity < widget.event.availableSeats
-                                  ? () {
-                                      setModalState(() {
-                                        _ticketQuantity++;
-                                      });
-                                      setState(() {});
-                                    }
-                                  : null,
-                              icon: const Icon(Icons.add_circle_outline),
-                              color: AppTheme.primaryColor,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Total and continue button
-                  Row(
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Total',
-                            style: GoogleFonts.lexend(
-                              fontSize: 12,
-                              color: AppTheme.textSecondaryColor,
-                            ),
-                          ),
-                          Text(
-                            '${widget.event.currency} ${(widget.event.totalExpence * _ticketQuantity).toStringAsFixed(0)}',
-                            style: GoogleFonts.lexend(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(width: 24),
-                      Expanded(
-                        child: SizedBox(
-                          height: 48,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                              _handleTicketBooking();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryColor,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Text(
-                              'Continue to Payment',
-                              style: GoogleFonts.lexend(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: MediaQuery.of(context).padding.bottom),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
   }
 
   @override
@@ -681,6 +494,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                                 // Simple visual interaction
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
+                                    behavior: SnackBarBehavior.floating,
                                     content: Text('Opening map for ${event.venueName}...'),
                                     duration: const Duration(seconds: 1),
                                   ),
@@ -836,6 +650,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                                       onTap: () {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
+                                            behavior: SnackBarBehavior.floating,
                                             content: Text('Contact email: ${event.contactEmail}'),
                                             duration: const Duration(seconds: 2),
                                           ),
@@ -848,6 +663,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                                       onTap: () {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
+                                            behavior: SnackBarBehavior.floating,
                                             content: Text('Call phone: ${event.contactPhone}'),
                                             duration: const Duration(seconds: 2),
                                           ),
@@ -912,6 +728,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                         });
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
+                            behavior: SnackBarBehavior.floating,
                             content: Text(
                               _isBookmarked ? 'Event added to favorites' : 'Event removed from favorites',
                             ),
@@ -978,7 +795,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Total Price',
+                        'Event Price',
                         style: GoogleFonts.lexend(
                           fontSize: 12,
                           color: AppTheme.textSecondaryColor,
@@ -986,7 +803,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${widget.event.currency} ${(widget.event.totalExpence * _ticketQuantity).toStringAsFixed(0)}',
+                        '${widget.event.currency} ${widget.event.totalExpence.toStringAsFixed(0)}',
                         style: GoogleFonts.lexend(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -1001,7 +818,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                       height: 56,
                       child: ElevatedButton(
                         onPressed: (widget.event.availableSeats > 0 && !_isProcessingPayment)
-                            ? _showQuantitySelector
+                            ? _handleEventBooking
                             : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primaryColor,
@@ -1023,7 +840,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                                 ),
                               )
                             : Text(
-                                widget.event.availableSeats > 0 ? 'Book Ticket' : 'Sold Out',
+                                widget.event.availableSeats > 0 ? 'Book Event' : 'Sold Out',
                                 style: GoogleFonts.lexend(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
