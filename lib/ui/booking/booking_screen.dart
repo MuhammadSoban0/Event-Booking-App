@@ -120,16 +120,9 @@ class BookingScreen extends ConsumerWidget {
               placeholder: (context, url) => Container(
                 height: 160,
                 color: Colors.grey[200],
-                child: Center(
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-                      strokeWidth: 2,
-                    ),
-                  ),
-                ),
+                child: Container()
+                    .animate(onPlay: (controller) => controller.repeat())
+                    .shimmer(duration: 1500.ms, color: Colors.white.withOpacity(0.8)),
               ),
               errorWidget: (context, url, error) => Container(
                 height: 160,
